@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SBPA — Vento &amp; Visibilidade</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
+  #map { height: 100%; width: 100%; }
+  .panel {
+    position: absolute; top: 12px; right: 12px; z-index: 1000;
+    background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25); font-size: 14px; min-width: 220px;
+  }
+  .panel h1 { font-size: 15px; margin: 0 0 8px; }
+  .panel .row { display: flex; justify-content: space-between; margin: 2px 0; }
+  .panel .raw { margin-top: 8px; font-size: 11px; color: #555; word-break: break-all; }
+  .cat { font-weight: 600; padding: 1px 6px; border-radius: 4px; color: white; }
+  .cat-VFR { background: #2e7d32; }
+  .cat-MVFR { background: #1565c0; }
+  .cat-IFR { background: #c62828; }
+  .cat-LIFR { background: #ad1457; }
+  .wind-arrow { transform-origin: center center; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="panel" id="panel">Carregando dados...</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const DATA_URL = "data/weather.json";
+const REFRESH_MS = 5 * 60 * 1000; // recheca a cada 5 min no navegador
+
+const map = L.map("map");
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap contributors",
+  maxZoom: 19,
+}).addTo(map);
+
+let marker = null;
+
+function windArrowIcon(dirDeg) {
+  // Seta aponta para onde o vento SOPRA (dirDeg + 180), já que METAR reporta de onde ele VEM.
+  const rotation = (dirDeg ?? 0) + 180;
+  const svg = `
+    <svg width="48" height="48" viewBox="0 0 48 48" class="wind-arrow" style="transform: rotate(${rotation}deg)">
+      <line x1="24" y1="40" x2="24" y2="10" stroke="#1a1a1a" stroke-width="3" />
+      <polygon points="24,4 16,16 32,16" fill="#1a1a1a" />
+    </svg>`;
+  return L.divIcon({
+    html: svg,
+    className: "",
+    iconSize: [48, 48],
+    iconAnchor: [24, 24],
+  });
+}
+
+function render(data) {
+  const lat = data.lat, lon = data.lon;
+  map.setView([lat, lon], 12);
+
+  const icon = windArrowIcon(data.wind.dir_deg);
+  if (marker) {
+    marker.setIcon(icon);
+    marker.setLatLng([lat, lon]);
+  } else {
+    marker = L.marker([lat, lon], { icon }).addTo(map);
+  }
+
+  const cat = data.flight_category || "?";
+  const updated = new Date(data.updated_utc).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+  document.getElementById("panel").innerHTML = `
+    <h1>${data.icao} — ${data.name || ""}</h1>
+    <div class="row"><span>Categoria</span><span class="cat cat-${cat}">${cat}</span></div>
+    <div class="row"><span>Vento</span><span>${data.wind.dir_deg ?? "-"}° / ${data.wind.speed_kt ?? "-"}kt${data.wind.gust_kt ? " (raj. " + data.wind.gust_kt + "kt)" : ""}</span></div>
+    <div class="row"><span>Visibilidade</span><span>${data.visibility_sm ?? "-"} SM</span></div>
+    <div class="row"><span>Atualizado</span><span>${updated}</span></div>
+    <div class="raw">${data.raw_metar || ""}</div>
+  `;
+
+  marker.bindPopup(`<b>${data.icao}</b><br>${data.raw_metar || ""}`);
+}
+
+async function load() {
+  try {
+    const resp = await fetch(DATA_URL + "?t=" + Date.now());
+    const data = await resp.json();
+    render(data);
+  } catch (e) {
+    document.getElementById("panel").innerText = "Erro ao carregar dados: " + e;
+  }
+}
+
+load();
+setInterval(load, REFRESH_MS);
+</script>
+</body>
+</html>
