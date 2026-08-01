@@ -1,5 +1,6 @@
 name: Update weather data
 
+
 on:
   schedule:
     - cron: "*/15 * * * *"
