@@ -21,7 +21,6 @@
   .cat-MVFR { background: #1565c0; }
   .cat-IFR { background: #c62828; }
   .cat-LIFR { background: #ad1457; }
-  .wind-arrow { transform-origin: center center; }
 </style>
 </head>
 <body>
@@ -41,19 +40,38 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 let marker = null;
 
-function windArrowIcon(dirDeg) {
-  // Seta aponta para onde o vento SOPRA (dirDeg + 180), já que METAR reporta de onde ele VEM.
+function windsockIcon(dirDeg, speedKt) {
+  // Biruta: a boca fica presa no mastro e o rabo aponta para onde o vento SOPRA
+  // (dirDeg + 180, já que o METAR reporta de onde ele VEM).
   const rotation = (dirDeg ?? 0) + 180;
+
+  // Vento sustentado satura a "inflação" da biruta perto de 18kt (~real: full extension ~15-20kt).
+  const extension = Math.max(0, Math.min((speedKt ?? 0) / 18, 1));
+  const growScale = 0.45 + 0.55 * extension; // murcha/curta parada -> cheia/esticada com vento forte
+
+  const poleH = 24, len = 30, r1 = 7, r2 = 1.5;
+  const halfWidthAt = (s) => r1 + (r2 - r1) * (s / len);
+  const stripe = (s0, s1) => {
+    const w0 = halfWidthAt(s0), w1 = halfWidthAt(s1);
+    return `${w0},${-s0} ${w1},${-s1} ${-w1},${-s1} ${-w0},${-s0}`;
+  };
+  const seg = len / 3;
+
   const svg = `
-    <svg width="48" height="48" viewBox="0 0 48 48" class="wind-arrow" style="transform: rotate(${rotation}deg)">
-      <line x1="24" y1="40" x2="24" y2="10" stroke="#1a1a1a" stroke-width="3" />
-      <polygon points="24,4 16,16 32,16" fill="#1a1a1a" />
+    <svg width="130" height="130" viewBox="-65 -65 130 130">
+      <line x1="0" y1="0" x2="0" y2="${-poleH}" stroke="#555" stroke-width="2.5" />
+      <circle cx="0" cy="${-poleH}" r="2" fill="#555" />
+      <g transform="translate(0,${-poleH}) rotate(${rotation}) scale(${growScale})">
+        <polygon points="${stripe(0, seg)}" fill="#ff6d00" stroke="#8a3d00" stroke-width="0.5" />
+        <polygon points="${stripe(seg, 2 * seg)}" fill="#ffffff" stroke="#8a3d00" stroke-width="0.5" />
+        <polygon points="${stripe(2 * seg, len)}" fill="#ff6d00" stroke="#8a3d00" stroke-width="0.5" />
+      </g>
     </svg>`;
   return L.divIcon({
     html: svg,
     className: "",
-    iconSize: [48, 48],
-    iconAnchor: [24, 24],
+    iconSize: [130, 130],
+    iconAnchor: [65, 65],
   });
 }
 
@@ -61,7 +79,7 @@ function render(data) {
   const lat = data.lat, lon = data.lon;
   map.setView([lat, lon], 12);
 
-  const icon = windArrowIcon(data.wind.dir_deg);
+  const icon = windsockIcon(data.wind.dir_deg, data.wind.speed_kt);
   if (marker) {
     marker.setIcon(icon);
     marker.setLatLng([lat, lon]);
