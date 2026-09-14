@@ -3,14 +3,14 @@
   "name": "Porto Alegre/Filho Intl, RS, BR",
   "lat": -29.994,
   "lon": -51.171,
-  "updated_utc": "2026-09-14T18:41:31Z",
-  "obs_time_utc": "2026-09-14T18:00:00.000Z",
+  "updated_utc": "2026-09-14T22:05:52Z",
+  "obs_time_utc": "2026-09-14T22:00:00.000Z",
   "wind": {
-    "dir_deg": "VRB",
-    "speed_kt": 2,
+    "dir_deg": 170,
+    "speed_kt": 3,
     "gust_kt": null
   },
   "visibility_sm": "6+",
-  "flight_category": "VFR",
-  "raw_metar": "METAR SBPA 141800Z VRB02KT 9999 BKN035 BKN090 19/12 Q1019"
+  "flight_category": "MVFR",
+  "raw_metar": "METAR SBPA 142200Z 17003KT 9999 BKN030 15/11 Q1018"
 }
